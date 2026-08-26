@@ -192,8 +192,8 @@ tracks the reader: the entry for the section currently on screen is highlighted,
 and the column scrolls to keep that entry visible. Scrolling the column by hand
 is not interrupted while the entry stays in view.
 
-Defaults only apply on a fresh install. If the extension is already installed
-with the ToC turned off, turn it on from the extension popup.
+An install that predates this change has the ToC turned on once on upgrade.
+Turning it back off from the popup afterwards sticks.
 
 ---
 

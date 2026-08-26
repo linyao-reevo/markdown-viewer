@@ -2,7 +2,7 @@
 # Change Log
 
 ## v5.4
-- the Table of Contents is on by default for new installs
+- the Table of Contents is on by default, and is turned on once on upgrade
 - the Table of Contents highlights the section on screen and scrolls to keep it in view
 - edit markdown files in the page and save back to disk
 - new Folders options tab for granting write access to a whole directory

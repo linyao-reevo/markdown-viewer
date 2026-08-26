@@ -37,10 +37,17 @@ Out of scope:
 
 `background/storage.js` sets `content.toc: true`.
 
-Defaults are only read on a fresh install. An existing user has a stored
-settings object and keeps `toc: false` until they toggle it themselves. This is
-a new user change, not a migration. `README.md` is updated so the documented
-default matches.
+That alone only reaches a fresh install. `md.storage` reads the stored settings
+object and uses it whole, falling back to the defaults only when storage is
+completely empty, so an existing user keeps `toc: false` forever.
+
+Reaching an existing install is what `md.storage.migrations` is for. It runs on
+every load, so the migration has to be safe to run twice: it turns the ToC on
+and writes a `tocDefault` marker, and does nothing when that marker is already
+there. A user who then turns the ToC back off keeps it off. The defaults carry
+`tocDefault: true` as well, so a fresh install is never migrated.
+
+`README.md` is updated so the documented default matches.
 
 ## Scroll spy
 
@@ -149,6 +156,11 @@ for `a._active`, next to the existing per theme ToC rules.
 - The index advances as a heading crosses the scroll line, and not before.
 - Scrolled to the bottom returns the last heading even when the last section is
   shorter than the viewport.
+
+`test/storage.test.js` evaluates `background/storage.js` in a sandbox with the
+extension globals stubbed and covers the migration: an old install gets the ToC
+turned on, turning it back off survives the next load, a fresh install carries
+the marker already, and no other content option is disturbed.
 
 `test/postprocess.test.js` gains one case that pins the invariant the DOM half
 depends on: the toc href equals the heading id byte for byte, the id really is

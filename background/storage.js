@@ -44,6 +44,9 @@ md.storage.defaults = (compilers) => {
     raw: false,
     edit: false,
     match,
+    // a fresh install already has the toc on, so the migration that turns it on
+    // for an older one has nothing to do here
+    tocDefault: true,
     themes: {
       width: 'auto',
     },
@@ -197,5 +200,13 @@ md.storage.migrations = (state) => {
   // v5.3 -> v5.4
   if (state.edit === undefined) {
     state.edit = false
+  }
+  // the toc stopped being opt in. a stored settings object is used whole and
+  // never falls back to the defaults, so changing the default alone reaches new
+  // installs only. turn it on once here, and remember that it was done, so
+  // turning it back off afterwards is not undone on the next load.
+  if (state.tocDefault === undefined) {
+    state.tocDefault = true
+    state.content.toc = true
   }
 }
