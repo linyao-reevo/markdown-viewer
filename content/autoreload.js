@@ -17,6 +17,12 @@
       return
     }
 
+    // while editing, never let the view go blank because the file momentarily
+    // read as empty; that is how a truncation elsewhere becomes lost work
+    if (state.edit && mdlines.emptied(md, state.reload.current)) {
+      return
+    }
+
     state.reload.md = true
     state.reload.current = md
     state.original = md

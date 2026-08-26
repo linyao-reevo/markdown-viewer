@@ -38,6 +38,13 @@
       return {error: 'gone'}
     }
 
+    // last line of defence against writing nothing over something. The file on
+    // disk is what is checked, not what the page was loaded with, so this
+    // holds even if the buffer was replaced by an empty one somewhere upstream.
+    if (!force && mdlines.emptied(markdown, disk)) {
+      return {error: 'emptied', lines: mdlines.split(disk).length}
+    }
+
     if (!force && mdlines.normalise(disk) !== mdlines.normalise(original)) {
       return {error: 'mismatch'}
     }

@@ -60,7 +60,7 @@ content/index.js                background/fs.js
                                       v
                                chrome.windows.create
                                picker/index.html
-                               showSaveFilePicker()
+                               showDirectoryPicker()
 ```
 
 ### 1. Source mapping
@@ -180,11 +180,26 @@ lifetime reason given under Constraints.
 `showDirectoryPicker`, pre-labelled with the name of the folder the file sits
 in, because one grant there covers every markdown file under it; the chosen
 folder is rejected and forgotten again if it turns out not to contain the file.
-A secondary action runs `showSaveFilePicker` for the single file and caches the
-handle under the file URL. Either way, later saves are silent.
+A secondary action grants the single file and caches the handle under the file
+URL. Either way, later saves are silent.
+
+That secondary action uses `showOpenFilePicker` followed by
+`requestPermission`, never `showSaveFilePicker`. A save picker truncates
+whatever it is pointed at the moment it is confirmed, so offering it for the
+file the page is showing empties that file. Two prompts is the price of not
+destroying the document. The handle is stored before the permission prompt, so
+a refusal can be retried as a plain permission request instead of starting
+over.
 
 The window is worded as a permission prompt rather than a save dialog, since
 the write always goes to the file the page was loaded from.
+
+**Never writing nothing over something.** Before any write, the content on disk
+is checked, and an empty buffer over a non-empty file is refused unless the
+user forces it. The check is against the file rather than against what the page
+loaded, so it holds even when the buffer was emptied by a bug upstream rather
+than by the user. Autoreload applies the same rule while edit mode is on, so a
+file that momentarily reads as empty cannot blank the view.
 
 **Lapsed permission.** Chrome drops handle permissions between browser sessions
 unless the user granted persistent access. When `queryPermission` returns
@@ -235,6 +250,7 @@ Modified:
 | No granted folder covers the path | Picker window opens; cancelling leaves the buffer dirty |
 | Handle permission lapsed | Permission window opens behind a click |
 | On-disk content differs from what was loaded | Write refused; Reload or Overwrite anyway |
+| Buffer is empty and the file is not | Write refused, line count shown; Overwrite anyway |
 | Write throws | Error surfaced in the status bar; buffer stays dirty |
 | Tab closed while dirty | `beforeunload` warning |
 

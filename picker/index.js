@@ -67,9 +67,13 @@
     return true
   }
 
+  // Deliberately an open picker, not a save picker. A save picker truncates
+  // whatever it is pointed at the moment it is confirmed, which empties the
+  // very file the page is showing. An open picker only reads, so write access
+  // is asked for separately.
   var grantFile = async () => {
-    var handle = await window.showSaveFilePicker({
-      suggestedName: name,
+    var picked = await window.showOpenFilePicker({
+      multiple: false,
       types: [{
         description: 'Markdown',
         accept: {'text/markdown': [
@@ -78,8 +82,25 @@
         ]},
       }],
     })
+
+    var handle = picked[0]
+
+    if (handle.name !== name) {
+      throw new Error(
+        'That is ' + handle.name + ', not ' + name +
+        '. Choose the file the page is showing.'
+      )
+    }
+
+    // remembered before the prompt, so a refusal can be retried as a plain
+    // permission request rather than starting over
     await mdidb.files.set(url, handle)
-    return true
+
+    if (await handle.queryPermission({mode: 'readwrite'}) === 'granted') {
+      return true
+    }
+
+    return await handle.requestPermission({mode: 'readwrite'}) === 'granted'
   }
 
   var regrant = async () => {
@@ -129,8 +150,9 @@
     $('#single').textContent = 'Only this file'
     $('#single').classList.remove('hidden')
     $('#note').textContent =
-      'This is a permission prompt, not Save As. Your edits overwrite the ' +
-      'original file either way.'
+      'These are permission prompts, not Save As. Nothing is written until you ' +
+      'save. Granting a single file asks twice: once to point at it, once to ' +
+      'allow editing.'
   }
 
   $('#grant').addEventListener('click', () =>

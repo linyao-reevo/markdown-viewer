@@ -139,3 +139,20 @@ test('applyEol never removes a trailing newline', () => {
 test('normalise ignores line endings and trailing whitespace', () => {
   assert.equal(lines.normalise('a\r\nb\r\n\n'), lines.normalise('a\nb'))
 })
+
+test('emptied catches a blank write over real content', () => {
+  assert.equal(lines.emptied('', 'a\nb\n'), true)
+  assert.equal(lines.emptied('   \n\n', 'a\nb\n'), true)
+  assert.equal(lines.emptied(undefined, 'a\nb\n'), true)
+})
+
+test('emptied allows an ordinary write', () => {
+  assert.equal(lines.emptied('a\nb\n', 'a\n'), false)
+  assert.equal(lines.emptied('a', 'a\nb\nc\n'), false)
+})
+
+test('emptied allows writing nothing over nothing', () => {
+  assert.equal(lines.emptied('', ''), false)
+  assert.equal(lines.emptied('', '\n\n  \n'), false)
+  assert.equal(lines.emptied('', undefined), false)
+})

@@ -215,8 +215,12 @@ yourself.
 The grant is per folder, not per file. The first save opens a small window
 offering to grant the folder the file sits in. Choose that folder once and
 **every** markdown file in it, including subfolders, saves in place from then
-on with no further prompts. The same window offers `Only this file` if you
-would rather grant a single file.
+on with no further prompts.
+
+The same window offers `Only this file` if you would rather grant a single
+file. That route asks twice, once to point at the file and once to allow
+editing it, because the picker that would do it in one step truncates the file
+it is pointed at.
 
 You can also grant folders ahead of time: open `Advanced Options` and select
 the `Folders` tab.

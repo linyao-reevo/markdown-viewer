@@ -306,6 +306,12 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
         return
       }
 
+      if (res.error === 'emptied') {
+        status('mismatch',
+          'Refusing to write an empty file over ' + res.lines + ' lines')
+        return
+      }
+
       // these are all fixed by granting access, so the bar offers to do that
       if (res.error === 'nogrants' || res.error === 'notfound' ||
           res.error === 'permission' || res.error === 'gone') {

@@ -164,6 +164,9 @@ Load the unpacked extension from a `build/package.sh chrome` output and confirm:
 9. Editing the file in another editor and then saving from the page is refused
    with the mismatch message.
 10. A CRLF file saves without its line endings being rewritten.
+15. Granting a single file leaves that file's contents intact. A save picker
+    truncates its target on confirmation, so this route must never use one.
+16. Deleting every block and saving is refused with a line count, not written.
 11. Frontmatter survives a save byte for byte.
 12. Closing the tab while dirty warns.
 13. Autoreload does not fight the editor while dirty.
