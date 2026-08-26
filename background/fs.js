@@ -60,8 +60,8 @@ md.fs = () => {
     chrome.windows.create({
       url: '/picker/index.html?mode=' + mode + '&url=' + encodeURIComponent(url),
       type: 'popup',
-      width: 520,
-      height: 300,
+      width: 560,
+      height: 400,
     }, (win) => {
       if (pending) {
         pending.id = win && win.id

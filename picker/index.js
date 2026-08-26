@@ -1,7 +1,11 @@
 
-// A file dialog closes an action popup and cannot run on a file:// page at
-// all, so both the picker and the permission prompt live in this window. It
-// stores what the user grants and reports back to the service worker.
+// Chrome will not hand an extension write access to a local path without one
+// user mediated grant, and that grant cannot be asked for from a file:// page
+// or from an action popup, which a file dialog closes. So it is asked for
+// here, once, and remembered.
+//
+// Granting the containing folder is the default, because it covers every
+// markdown file in it. Picking the single file is offered as a fallback.
 
 ;(() => {
 
@@ -9,28 +13,58 @@
   var mode = params.get('mode') === 'permission' ? 'permission' : 'save'
   var url = params.get('url') || ''
   var name = mdpaths.filename(url) || 'document.md'
+  var parts = mdpaths.segments(url)
+  var folder = parts.length > 1 ? parts[parts.length - 2] : ''
 
   var $ = document.querySelector.bind(document)
 
   var reported = false
-  var report = (result) => {
+  var report = (ok) => {
     if (reported) {
       return
     }
     reported = true
-    chrome.runtime.sendMessage({message: 'picker.done', url, ok: !!result.ok})
+    chrome.runtime.sendMessage({message: 'picker.done', url, ok: !!ok})
+  }
+
+  var busy = (state) => {
+    $('#grant').disabled = state
+    $('#single').disabled = state
   }
 
   var fail = (message) => {
     $('#error').textContent = message
     $('#error').classList.remove('hidden')
-    $('#grant').disabled = false
+    busy(false)
   }
 
-  var save = async () => {
+  var done = (ok) => {
+    report(ok)
+    window.close()
+  }
+
+  // grant the folder the file sits in; every markdown file under it saves
+  // silently from then on
+  var grantFolder = async () => {
+    var handle = await window.showDirectoryPicker({mode: 'readwrite'})
+    var id = await mdidb.dirs.add(handle)
+
+    // make sure the folder they chose actually contains this file, otherwise
+    // the next save would open this window all over again
+    if (!await mdhandles.resolve(url)) {
+      await mdidb.dirs.remove(id)
+      throw new Error(
+        'That folder does not contain ' + name + '. Choose ' +
+        (folder ? '"' + folder + '"' : 'the folder the file is in') + ' instead.'
+      )
+    }
+
+    return true
+  }
+
+  var grantFile = async () => {
     var handle = await window.showSaveFilePicker({
       suggestedName: name,
-      startIn: 'documents',
       types: [{
         description: 'Markdown',
         accept: {'text/markdown': [
@@ -40,46 +74,65 @@
       }],
     })
     await mdidb.files.set(url, handle)
-    return {ok: true}
+    return true
   }
 
-  var permission = async () => {
+  var regrant = async () => {
     var found = await mdhandles.resolve(url)
     if (!found) {
-      // the grant is gone entirely, so fall back to picking the file
-      return save()
+      // the grant is gone entirely, so ask for it from scratch
+      return grantFolder()
     }
-    var state = await found.root.requestPermission({mode: 'readwrite'})
-    return {ok: state === 'granted'}
+    return await found.root.requestPermission({mode: 'readwrite'}) === 'granted'
   }
 
-  $('#path').textContent = decodeURIComponent(url.replace(/^file:\/\//i, ''))
-
-  $('#explain').textContent = mode === 'permission'
-    ? 'Chrome dropped write access to this file when the browser restarted. Grant it again to save.'
-    : 'Chrome cannot write to a local file until you point at it once. Choose this same file to save your edits.'
-
-  $('#grant').textContent = mode === 'permission' ? 'Grant access' : 'Choose file'
-
-  $('#grant').addEventListener('click', () => {
+  var run = (action) => {
     $('#error').classList.add('hidden')
-    $('#grant').disabled = true
+    busy(true)
 
-    ;(mode === 'permission' ? permission() : save())
-      .then((result) => {
-        report(result)
-        window.close()
-      })
+    action()
+      .then(done)
       .catch((err) => {
         if (err && err.name === 'AbortError') {
-          report({ok: false})
-          window.close()
+          done(false)
           return
         }
         fail(String(err && err.message || err))
       })
-  })
+  }
+
+  /*-------------------------------------------------------------------------*/
+
+  $('#path').textContent = decodeURIComponent(url.replace(/^file:\/\//i, ''))
+
+  if (mode === 'permission') {
+    $('#title').textContent = 'Grant write access again'
+    $('#explain').textContent =
+      'Chrome dropped write access to this file when the browser restarted.'
+    $('#grant').textContent = 'Grant access'
+    $('#note').textContent =
+      'Saving overwrites this file in place. Chrome may ask again after a restart.'
+  }
+  else {
+    $('#title').textContent = 'Allow saving to this folder'
+    $('#explain').textContent =
+      'Chrome needs your permission once before an extension can write to a ' +
+      'local file. Choose the folder this file is in and every markdown file ' +
+      'in it saves in place from then on, with no further prompts.'
+    $('#grant').textContent =
+      folder ? 'Choose the "' + folder + '" folder' : 'Choose folder'
+    $('#single').textContent = 'Only this file'
+    $('#single').classList.remove('hidden')
+    $('#note').textContent =
+      'This is a permission prompt, not Save As. Your edits overwrite the ' +
+      'original file either way.'
+  }
+
+  $('#grant').addEventListener('click', () =>
+    run(mode === 'permission' ? regrant : grantFolder))
+
+  $('#single').addEventListener('click', () => run(grantFile))
 
   // closing the window without choosing counts as a cancel
-  window.addEventListener('unload', () => report({ok: false}))
+  window.addEventListener('unload', () => report(false))
 })()

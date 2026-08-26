@@ -176,9 +176,15 @@ saving does not rewrite every line of a CRLF file.
 lifetime reason given under Constraints.
 
 **Fallback.** When no granted folder covers the path, the service worker opens
-`picker/index.html` in a small extension window. A click there runs
-`showSaveFilePicker` with the file's name suggested, and the resulting file
-handle is cached under the file URL. Later saves of the same file are silent.
+`picker/index.html` in a small extension window. Its primary action is
+`showDirectoryPicker`, pre-labelled with the name of the folder the file sits
+in, because one grant there covers every markdown file under it; the chosen
+folder is rejected and forgotten again if it turns out not to contain the file.
+A secondary action runs `showSaveFilePicker` for the single file and caches the
+handle under the file URL. Either way, later saves are silent.
+
+The window is worded as a permission prompt rather than a save dialog, since
+the write always goes to the file the page was loaded from.
 
 **Lapsed permission.** Chrome drops handle permissions between browser sessions
 unless the user granted persistent access. When `queryPermission` returns

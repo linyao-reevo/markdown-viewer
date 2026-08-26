@@ -207,13 +207,22 @@ Press `Ctrl/Cmd+S` to save, `Esc` to abandon the block you are in, and
 
 ## Granting Write Access
 
-Chrome does not let an extension write to a local file until you point at it.
-The first save opens a small window asking you to choose the same file. After
-that, saving that file is silent.
+Chrome does not let an extension write to a local file until you have granted
+it access once. There is no way around this: no extension API can write to an
+arbitrary `file:///` path, and the grant has to come from a picker you drive
+yourself.
 
-To avoid doing this per file, open `Advanced Options` and select the `Folders`
-tab. Add a folder there and every markdown file inside it saves without asking
-again.
+The grant is per folder, not per file. The first save opens a small window
+offering to grant the folder the file sits in. Choose that folder once and
+**every** markdown file in it, including subfolders, saves in place from then
+on with no further prompts. The same window offers `Only this file` if you
+would rather grant a single file.
+
+You can also grant folders ahead of time: open `Advanced Options` and select
+the `Folders` tab.
+
+This is a permission prompt, not a `Save As` dialog. Saving always overwrites
+the file the page was loaded from.
 
 Chrome may drop these grants when the browser restarts. When that happens the
 extension asks for them again on the next save.
