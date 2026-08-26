@@ -306,3 +306,29 @@ footer nav a {
 footer nav a:hover {
   text-decoration: underline;
 }
+
+/*---------------------------------------------------------------------------*/
+/*folders*/
+
+.m-folders .m-label {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  padding: 5px 0 5px 0;
+}
+.m-folders .m-folder {
+  align-items: center;
+  border-top: 1px solid rgba(127, 127, 127, 0.25);
+  padding: 4px 0;
+}
+.m-folders .m-folder .m-button {
+  float: right;
+  margin-left: 6px;
+}
+.m-folders .m-warning {
+  color: #b08800;
+  font-size: 0.85rem;
+}
+.m-folders .m-error {
+  color: #cb2431;
+}

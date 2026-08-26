@@ -18,16 +18,29 @@ md.compilers.marked = (() => {
     smartypants: 'Use "smart" typographic punctuation\nfor things like quotes and dashes'
   }
 
+  var instance = (state) =>
+    new marked.marked(
+      state.marked,
+      marked.headings(),
+      state.marked.linkify ? marked.linkify() : () => {},
+      state.marked.smartypants ? marked.smartypants() : () => {},
+    )
+
+  var lines = (state, markdown) => {
+    try {
+      return mdblockmap.marked(instance(state).lexer(markdown), markdown)
+    }
+    catch (err) {
+      return null
+    }
+  }
+
   var ctor = ({storage: {state}}) => ({
     defaults,
     description,
-    compile: (markdown) =>
-      new marked.marked(
-        state.marked,
-        marked.headings(),
-        state.marked.linkify ? marked.linkify() : () => {},
-        state.marked.smartypants ? marked.smartypants() : () => {},
-      ).parse(markdown)
+    blockmap: () => 'ordinal',
+    lines: (markdown) => lines(state, markdown),
+    compile: (markdown) => instance(state).parse(markdown)
   })
 
   return Object.assign(ctor, {defaults, description})

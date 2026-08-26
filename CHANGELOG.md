@@ -1,6 +1,12 @@
 
 # Change Log
 
+## v5.4
+- edit markdown files in the page and save back to disk
+- new Folders options tab for granting write access to a whole directory
+- source maps for the markdown-it, marked and remark compilers
+- unit tests for the line, path and source map logic
+
 ## v5.3 - 2024-04-30
 - custom theme support
 - syntax highlighted raw markdown view

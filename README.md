@@ -24,6 +24,7 @@
 - Configurable Markdown file path detection
 - Settings synchronization
 - Raw and rendered markdown views
+- Edit local markdown files in the page and save back to disk
 - Free and Open Source
 
 # Table of Contents
@@ -32,6 +33,7 @@
 - **[Themes](#themes)**
 - **[Compiler Options](#compiler-options)**
 - **[Content Options](#content-options)**
+- **[Editing](#editing)**
 - **[Manage Origins](#manage-origins)**
 - **[Syntax Examples](#syntax-examples)**
 
@@ -184,6 +186,50 @@ Alternatively code blocks can be wrapped in HTML tags:
 ## ToC
 
 Generates Table of Contents (ToC) based on the headers found in the markdown document.
+
+---
+
+# Editing
+
+Click on the Markdown Viewer icon and press `Edit` to turn edit mode on for
+local markdown files.
+
+Hovering over a block outlines it. Clicking it opens that block for editing:
+
+- Paragraphs, headings, lists, quotes and tables become editable text. Only the
+  block you touch is rewritten, so the rest of the file stays byte for byte the
+  same.
+- Code blocks, diagrams and raw HTML open a plain markdown source box instead,
+  which keeps them from being flattened into their rendered form.
+
+Press `Ctrl/Cmd+S` to save, `Esc` to abandon the block you are in, and
+`Ctrl/Cmd+Z` to undo the last committed block.
+
+## Granting Write Access
+
+Chrome does not let an extension write to a local file until you point at it.
+The first save opens a small window asking you to choose the same file. After
+that, saving that file is silent.
+
+To avoid doing this per file, open `Advanced Options` and select the `Folders`
+tab. Add a folder there and every markdown file inside it saves without asking
+again.
+
+Chrome may drop these grants when the browser restarts. When that happens the
+extension asks for them again on the next save.
+
+## Limitations
+
+- Editing works on `file:///` URLs only. There is no local file to write back
+  to for a remote markdown document.
+- Firefox has no File System Access API, so edit mode is not available there.
+- Edit mode needs source positions from the compiler. It works with
+  `markdown-it`, `marked` and `remark`, and is turned off while the `mathjax`
+  content option is on, because the MathJax pass rewrites the source before it
+  is compiled.
+- Editing a block rewrites it from its rendered form, so within that one block
+  a `*` bullet may come back as `-` and a reference link may come back inline.
+  No other block in the file is touched.
 
 ---
 

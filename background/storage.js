@@ -42,6 +42,7 @@ md.storage.defaults = (compilers) => {
     theme: 'github',
     compiler: 'markdown-it',
     raw: false,
+    edit: false,
     match,
     themes: {
       width: 'auto',
@@ -192,5 +193,9 @@ md.storage.migrations = (state) => {
       theme: '',
       color: 'auto'
     }
+  }
+  // v5.3 -> v5.4
+  if (state.edit === undefined) {
+    state.edit = false
   }
 }

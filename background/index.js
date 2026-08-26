@@ -1,4 +1,6 @@
 
+importScripts('/lib/blockmap.js')
+
 importScripts('/vendor/markdown-it.min.js')
 importScripts('/vendor/marked.min.js')
 importScripts('/vendor/remark.min.js')
@@ -7,6 +9,7 @@ importScripts('/background/compilers/marked.js')
 importScripts('/background/compilers/remark.js')
 
 importScripts('/background/storage.js')
+importScripts('/background/fs.js')
 importScripts('/background/webrequest.js')
 importScripts('/background/detect.js')
 importScripts('/background/inject.js')
@@ -23,6 +26,7 @@ importScripts('/background/icon.js')
   var mathjax = md.mathjax()
   var xhr = md.xhr()
   var icon = md.icon({storage})
+  var fs = md.fs()
 
   var compilers = Object.keys(md.compilers)
     .reduce((all, compiler) => (
@@ -30,7 +34,7 @@ importScripts('/background/icon.js')
       all
     ), {})
 
-  var messages = md.messages({storage, compilers, mathjax, xhr, webrequest, icon})
+  var messages = md.messages({storage, compilers, mathjax, xhr, webrequest, icon, fs})
 
   chrome.tabs.onUpdated.addListener(detect.tab)
   chrome.runtime.onMessage.addListener(messages)

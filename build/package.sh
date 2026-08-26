@@ -33,13 +33,14 @@ sh mithril/build.sh
 sh panzoom/build.sh
 sh prism/build.sh
 sh remark/build.sh
+sh turndown/build.sh
 sh themes/build.sh $browser
 
 # copy files
 mkdir -p tmp
 mkdir -p tmp/markdown-viewer
 cd ..
-cp -r background content icons options popup themes vendor LICENSE build/tmp/markdown-viewer/
+cp -r background content icons lib offscreen options picker popup themes vendor LICENSE build/tmp/markdown-viewer/
 
 # copy manifest.json
 if [ "$browser" = "chrome" ]; then

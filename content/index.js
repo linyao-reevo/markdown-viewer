@@ -4,6 +4,7 @@ var $ = document.querySelector.bind(document)
 var state = {
   theme: args.theme,
   raw: args.raw,
+  edit: args.edit,
   themes: args.themes,
   content: args.content,
   compiler: args.compiler,
@@ -11,11 +12,22 @@ var state = {
   icon: args.icon,
   html: '',
   markdown: '',
+  // the file as it was last known to be on disk, for the pre write check
+  original: '',
+  // line ranges the compiler produced, and the kind of map it produced
+  blockmap: false,
+  lines: null,
+  // lines of frontmatter the compiler never saw
+  offset: 0,
+  dirty: false,
   toc: '',
   reload: {
     interval: null,
     ms: 1000,
     md: false,
+    // last body autoreload saw on disk; cleared after a save so our own write
+    // does not read as an external change
+    current: '',
   },
   _themes: {
     'github': 'light',
@@ -71,6 +83,12 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     state.reload.md = true
     m.redraw()
   }
+  else if (req.message === 'edit') {
+    state.edit = req.edit
+    // the block map is only compiled in when edit mode asks for it
+    state.reload.md = true
+    render(state.markdown)
+  }
   else if (req.message === 'autoreload') {
     clearInterval(state.reload.interval)
   }
@@ -97,6 +115,10 @@ var onupdate = {
 }
 
 var update = (update) => {
+  if (typeof mdedit !== 'undefined') {
+    mdedit.attach()
+  }
+
   scroll(update)
 
   if (state.content.syntax) {
@@ -114,11 +136,15 @@ var update = (update) => {
 
 var render = (md) => {
   state.markdown = md
+  state.offset = mdlines.frontmatterOffset(md)
   chrome.runtime.sendMessage({
     message: 'markdown',
     compiler: state.compiler,
-    markdown: frontmatter(state.markdown)
+    markdown: frontmatter(state.markdown),
+    blockmap: !!state.edit && !state.raw,
   }, (res) => {
+    state.blockmap = res.blockmap || false
+    state.lines = res.lines || null
     state.html = res.html
     if (state.content.emoji) {
       state.html = emojinator(state.html)
@@ -140,6 +166,7 @@ var render = (md) => {
 function mount () {
   $('pre').style.display = 'none'
   var md = $('pre').innerText
+  state.original = md
   favicon()
 
   m.mount($('body'), {

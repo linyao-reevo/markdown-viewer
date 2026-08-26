@@ -118,6 +118,35 @@ ranges that line up with its source.
   limitations.
 - `CHANGELOG.md`: an entry for the change.
 
+## Outcome
+
+All stages are implemented. Five things came out differently than planned:
+
+1. The pure logic went to `lib/` rather than `content/` and `background/`,
+   because the offscreen writer and the picker window need it too.
+2. `marked`'s mapping had to change. Adding up `raw` lengths drifts, because
+   marked consumes link reference definitions without emitting a token for
+   them, which silently shifts every later block by one. Each token is now
+   located by searching for its raw text from the previous token's end.
+3. Compilers report a block's range with the following blank line included.
+   Splicing that range deletes the separator and glues the block to the next
+   one, so `trimRange` shrinks every range before it is used.
+4. Undo keeps whole buffer snapshots, not line ranges. A later edit elsewhere
+   shifts the lines an earlier range was recorded against.
+5. Edit mode is refused while the `mathjax` content option is on. That pass
+   collapses multi line formulas into a placeholder before compiling, so line
+   numbers after one of them are wrong.
+
+Two bugs were found and fixed during self review rather than in the browser:
+committing an edit that produces identical HTML left the DOM unrestored,
+because mithril does not diff trusted content that has not changed; and the
+first `marked` implementation produced a plausible but wrong range for the last
+block of any document containing a link reference definition.
+
+`build/package.sh chrome` fails in this environment at the `themes` step, which
+clones an external repository. That failure predates this work and is unrelated
+to it. Every step before it, including the new `turndown` build, succeeds.
+
 ## Manual checklist
 
 Load the unpacked extension from a `build/package.sh chrome` output and confirm:

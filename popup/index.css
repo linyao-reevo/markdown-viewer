@@ -67,9 +67,17 @@ body.dark .m-button {
 /*button*/
 
 /*defaults button*/
-#popup button:nth-child(2) { float: right; }
+#popup button.m-defaults { float: right; }
 /*advanced options button*/
-#popup button:nth-child(2n+3) { float: right; margin-top: 20px; }
+#popup button.m-advanced { float: right; margin-top: 20px; }
+
+/*edit button*/
+#popup button.m-edit { margin-left: 6px; }
+#popup button.m-edit[disabled] { opacity: 0.45; cursor: default; }
+#popup button.m-edit.m-on {
+  background-color: #2c974b !important;
+  color: #fff !important;
+}
 
 .m-button {
   background-color: #ececec !important;

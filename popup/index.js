@@ -52,6 +52,12 @@ var Popup = () => {
       'tiny',
     ],
     raw: false,
+    edit: false,
+    // whether the current compiler can produce a source map, and why not
+    blockmap: false,
+    blockmapReason: '',
+    // editing needs a local file to write back to
+    file: false,
     tab: '',
     tabs: ['theme', 'compiler', 'content'],
     compilers: [],
@@ -129,6 +135,17 @@ var Popup = () => {
       })
     },
 
+    edit: () => {
+      if (!editable()) {
+        return
+      }
+      state.edit = !state.edit
+      chrome.runtime.sendMessage({
+        message: 'popup.edit',
+        edit: state.edit
+      })
+    },
+
     defaults: () => {
       chrome.runtime.sendMessage({
         message: 'popup.defaults'
@@ -152,6 +169,9 @@ var Popup = () => {
     state.themes = res.themes
 
     state.raw = res.raw
+    state.edit = res.edit
+    state.blockmap = res.blockmap
+    state.blockmapReason = res.blockmapReason
     state.tab = localStorage.getItem('tab') || 'theme'
     state.compilers = res.compilers
     state.description.compiler = res.description
@@ -163,6 +183,23 @@ var Popup = () => {
   }
 
   chrome.runtime.sendMessage({message: 'popup'}, init)
+
+  // only the popup sits next to a rendered file; the options page does not
+  if (document.querySelector('.is-popup')) {
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      state.file = !!(tabs[0] && /^file:/i.test(tabs[0].url || ''))
+      m.redraw()
+    })
+  }
+
+  var editable = () => state.file && !state.raw && !!state.blockmap
+
+  var editTitle = () =>
+    !state.file ? 'Editing works on local files only' :
+    state.raw ? 'Turn off the raw markdown view to edit' :
+    !state.blockmap ? state.blockmapReason :
+    state.edit ? 'Editing is on — click a block in the page' :
+    'Edit this file in place'
 
   var oncreate = {
     ripple: (vnode) => {
@@ -195,8 +232,18 @@ var Popup = () => {
         },
         (state.raw ? 'Html' : 'Markdown')
       ),
+      // edit
+      m('button.mdc-button mdc-button--raised m-button m-edit', {
+        oncreate: oncreate.ripple,
+        onclick: events.edit,
+        disabled: !editable(),
+        title: editTitle(),
+        class: state.edit && editable() ? 'm-on' : '',
+        },
+        'Edit'
+      ),
       // defaults
-      m('button.mdc-button mdc-button--raised m-button', {
+      m('button.mdc-button mdc-button--raised m-button m-defaults', {
         oncreate: oncreate.ripple,
         onclick: events.defaults
         },
@@ -297,7 +344,7 @@ var Popup = () => {
       ),
 
       // advanced options
-      m('button.mdc-button mdc-button--raised m-button', {
+      m('button.mdc-button mdc-button--raised m-button m-advanced', {
         oncreate: oncreate.ripple,
         onclick: events.advanced
         },

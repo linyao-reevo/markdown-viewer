@@ -1,7 +1,28 @@
 
-md.messages = ({storage: {defaults, state, set}, compilers, mathjax, xhr, webrequest, icon}) => {
+md.messages = ({storage: {defaults, state, set}, compilers, mathjax, xhr, webrequest, icon, fs}) => {
+
+  // what kind of source map the current compiler can produce, if any
+  var blockmap = () => {
+    // the mathjax pass collapses multi line formulas into a placeholder before
+    // compiling, so every line number after one of them is wrong
+    if (state.content.mathjax) {
+      return false
+    }
+    var compiler = compilers[state.compiler]
+    return compiler.blockmap ? compiler.blockmap() : false
+  }
+
+  var blockmapReason = () =>
+    blockmap() ? '' :
+    state.content.mathjax ? 'Not available while MathJax is on' :
+    'The ' + state.compiler + ' compiler exposes no source positions'
 
   return (req, sender, sendResponse) => {
+
+    // addressed at the offscreen document, which has its own listener
+    if (req.target) {
+      return false
+    }
 
     // content
     if (req.message === 'markdown') {
@@ -12,13 +33,38 @@ md.messages = ({storage: {defaults, state, set}, compilers, mathjax, xhr, webreq
         markdown = jax.tokenize(markdown)
       }
 
-      var html = compilers[state.compiler].compile(markdown)
+      var map = req.blockmap ? blockmap() : false
+      var compiler = compilers[state.compiler]
+
+      var html = compiler.compile(markdown, {blockmap: !!map})
 
       if (state.content.mathjax) {
         html = jax.detokenize(html)
       }
 
-      sendResponse({message: 'html', html})
+      sendResponse({
+        message: 'html',
+        html,
+        blockmap: map,
+        lines: map === 'ordinal' && compiler.lines ? compiler.lines(markdown) : null,
+      })
+    }
+    else if (req.message === 'edit.save') {
+      fs.save(req)
+        .then(sendResponse)
+        .catch((err) => sendResponse({
+          error: 'write',
+          message: String(err && err.message || err),
+        }))
+    }
+    else if (req.message === 'edit.status') {
+      fs.status(req)
+        .then(sendResponse)
+        .catch(() => sendResponse({error: 'nohandle'}))
+    }
+    else if (req.message === 'picker.done') {
+      fs.finish(req.ok)
+      sendResponse()
     }
     else if (req.message === 'autoreload') {
       xhr.get(req.location, (err, body) => {
@@ -51,8 +97,35 @@ md.messages = ({storage: {defaults, state, set}, compilers, mathjax, xhr, webreq
         description: compilers[state.compiler].description,
         compilers: Object.keys(compilers),
         themes: state.themes,
-        settings: {theme: state.settings.theme}
+        settings: {theme: state.settings.theme},
+        blockmap: blockmap(),
+        blockmapReason: blockmapReason(),
       }))
+    }
+    else if (req.message === 'popup.edit') {
+      set({edit: req.edit})
+      if (!req.edit) {
+        notifyContent({message: 'edit', edit: false})
+      }
+      else {
+        // the editor is only injected when it is needed, so turning the mode
+        // on mid page has to put it there first
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+          chrome.scripting.executeScript({
+            target: {tabId: tabs[0].id},
+            files: [
+              '/vendor/turndown.min.js',
+              '/vendor/turndown-plugin-gfm.min.js',
+              '/content/edit.js',
+            ],
+          }, () => {
+            // lastError just means the tab has no viewer running
+            chrome.runtime.lastError
+            chrome.tabs.sendMessage(tabs[0].id, {message: 'edit', edit: true})
+          })
+        })
+      }
+      sendResponse()
     }
     else if (req.message === 'popup.theme') {
       set({theme: req.theme})

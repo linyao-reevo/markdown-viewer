@@ -78,22 +78,34 @@ returns HTML in which every top level block element carries
 - `remark`: a plugin sets `node.data.hProperties['data-md-line']` on each child
   of the mdast root from `node.position`. `remark-html` copies the property
   through. This is exact.
-- `marked`: `marked.Lexer.lex` gives top level tokens with `raw`. Accumulating
-  `raw` lengths yields a line range per token. The ranges are returned as an
-  ordered list and stamped onto the top level children of the rendered container
-  in document order. If the two counts disagree, edit mode is refused for that
+- `marked`: `marked.Lexer.lex` gives top level tokens with `raw`. Each token is
+  located by searching for its raw text from where the previous token ended,
+  and the resulting ranges are stamped onto the top level children of the
+  rendered container in document order. Adding up raw lengths instead would
+  drift, because marked consumes link reference definitions without emitting a
+  token for them — a silent one-block offset for everything that follows. If
+  the range count and the element count disagree, edit mode is refused for that
   document rather than guessing.
 
 Blocks that no compiler can attribute, such as raw HTML blocks, simply carry no
-marker. They are not editable. That is the safe outcome.
+marker. They are not editable. That is the safe outcome. For `marked`, whose
+mapping is positional, a raw HTML block refuses the whole document, because one
+such block can render into any number of elements.
 
-Two corrections are needed:
+Three corrections are needed:
 
 - **Frontmatter offset.** `content/index.js` strips frontmatter before
-  compiling, which shifts every line number. `frontmatter()` returns the number
-  of stripped lines and the offset is added back to every range.
-- **Compiler support.** `markdown-it` (the default), `remark` and `marked` are
-  supported. Any other compiler disables edit mode with a message naming it.
+  compiling, which shifts every line number. `frontmatterOffset()` returns the
+  number of stripped lines and the offset is added back to every range.
+- **Trailing blank lines.** Compilers report a block's range with the blank
+  line that follows it included. Splicing such a range would delete the
+  separator and glue the block to the next one, so every range is shrunk to the
+  lines that actually hold content before it is used.
+- **Compiler support.** `markdown-it` (the default), `marked` and `remark` are
+  supported. Any other compiler disables edit mode with a message naming it, as
+  does the `mathjax` content option: the MathJax pass collapses multi line
+  formulas into a placeholder before compiling, so every line number after one
+  of them is wrong.
 
 `state.markdown` in `content/index.js` becomes the single authoritative source
 string. Rendered HTML is always derived from it and never the other way round.
@@ -115,8 +127,10 @@ With edit mode on:
   footnote definitions, link reference definitions — instead swap into a
   monospace textarea holding their verbatim source lines. This keeps Turndown
   from ever flattening a diagram into its rendered SVG.
-- Commit happens on blur, on `Esc`, or on `Ctrl/Cmd+Enter`. `Esc` in a textarea
-  cancels instead.
+- Commit happens on clicking away or on `Ctrl/Cmd+Enter`. `Esc` abandons the
+  block. On commit the DOM is restored explicitly rather than by waiting for
+  the next render, because an edit that produces identical HTML produces no
+  render at all.
 - After a commit the whole document is re-rendered from the updated
   `state.markdown` through the existing `render()` path, so heading ids, the
   table of contents, link reference definitions and anchors all stay correct.
@@ -125,8 +139,10 @@ With edit mode on:
   headings, fenced code, `*` emphasis. A commit with no change produces no diff.
 
 A status bar is fixed to the bottom right. It shows `unsaved`, `saved`, or an
-error, and carries a Save button. `Ctrl/Cmd+S` saves. Each block keeps its
-pre-edit source lines so a single block edit can be undone.
+error, and carries a Save button. `Ctrl/Cmd+S` saves, `Ctrl/Cmd+Z` undoes the
+last committed block. Undo keeps whole buffer snapshots rather than line
+ranges, because an edit elsewhere shifts the lines an earlier range was
+recorded against.
 
 Autoreload is suspended while the buffer is dirty, and `beforeunload` warns on
 unsaved changes.
@@ -174,12 +190,17 @@ behind a click, since that requires user activation.
 New:
 
 - `content/edit.js`, `content/edit.css` — in-page editing.
-- `background/fs.js` — handle store, folder resolution, offscreen lifecycle.
+- `lib/lines.js`, `lib/paths.js`, `lib/blockmap.js` — the pure logic, shared by
+  the page, the offscreen writer and the tests.
+- `lib/idb.js`, `lib/handles.js` — handle storage and resolution, shared by the
+  options page, the picker window and the offscreen writer.
+- `background/fs.js` — offscreen lifecycle and picker window management.
 - `offscreen/index.html`, `offscreen/index.js` — verification and writing.
-- `picker/index.html`, `picker/index.js` — picker and permission window.
+- `picker/index.html`, `picker/index.js`, `picker/index.css` — picker and
+  permission window.
 - `options/folders.js` — Editable folders tab.
 - `build/turndown/build.sh`, `build/turndown/package.json` — vendored Turndown.
-- `test/` — unit tests for the pure logic.
+- `package.json`, `test/` — the test runner and the unit tests.
 
 Modified:
 
@@ -202,7 +223,7 @@ Modified:
 
 | Situation | Behaviour |
 | --- | --- |
-| Compiler has no block map | Edit toggle disabled, reason shown in popup |
+| Compiler has no block map, or MathJax is on | Edit toggle disabled, reason shown in popup |
 | Block map count disagrees with the DOM | Edit mode refused for that document |
 | Not a `file://` URL | Edit toggle disabled, reason shown |
 | No granted folder covers the path | Picker window opens; cancelling leaves the buffer dirty |
@@ -214,18 +235,27 @@ Modified:
 ## Testing
 
 The repository has no test runner. The risky logic here is pure, so a small one
-is added: `node --test` over `test/`, covering
+is added: `npm test`, which is `node --test` over `test/`, covering
 
-- line splicing, including ranges at the start and end of a file and ranges that
-  span a fenced block,
-- block map extraction with a frontmatter offset,
+- line splicing, including ranges at the start and end of a file and ranges
+  that span a fenced block,
+- range trimming, and the list edit that would otherwise eat the blank line
+  before the next block,
+- block map extraction against the real `markdown-it` and `marked`, including
+  the link reference definition case and CRLF source,
 - folder relative path resolution, including duplicate folder names and paths
   that do not resolve,
-- line ending and trailing newline detection and reapplication.
+- line ending and trailing newline detection and reapplication,
+- the round trip property: rendering a block, converting it back with the real
+  Turndown configuration and splicing it in leaves the document rendering
+  identical and every other line byte identical.
+
+That last one is what catches a Turndown setting that quietly rewrites
+markdown, so it is the test to keep green when the configuration is touched.
 
 Everything that needs a browser — picker windows, permission prompts,
-contenteditable behaviour, Turndown fidelity — is covered by a manual checklist
-in the implementation plan.
+contenteditable behaviour — is covered by a manual checklist in the
+implementation plan.
 
 ## Known limitation
 

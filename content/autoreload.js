@@ -1,16 +1,26 @@
 
 ;(() => {
-  var current = ''
 
   var response = (md) => {
-    if (!current) {
-      current = md
+    if (!state.reload.current) {
+      state.reload.current = md
+      state.original = md
+      return
     }
-    else if (current !== md) {
-      state.reload.md = true
-      current = md
-      render(md)
+
+    if (state.reload.current === md) {
+      return
     }
+
+    // an unsaved edit outranks whatever is on disk
+    if (state.dirty) {
+      return
+    }
+
+    state.reload.md = true
+    state.reload.current = md
+    state.original = md
+    render(md)
   }
 
   var xhr = new XMLHttpRequest()

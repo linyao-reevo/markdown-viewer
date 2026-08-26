@@ -1,0 +1,16 @@
+{
+  "name": "markdown-viewer",
+  "version": "0.0.0",
+  "description": "Markdown Viewer / Browser Extension",
+  "private": true,
+  "dependencies": {
+    "turndown": "7.2.0",
+    "turndown-plugin-gfm": "1.0.2"
+  },
+  "devDependencies": {
+    "terser": "5.30.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

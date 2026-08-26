@@ -45,8 +45,10 @@ md.compilers['markdown-it'] = (() => {
   var ctor = ({storage: {state}}) => ({
     defaults,
     description,
-    compile: (markdown) =>
+    blockmap: () => 'attrs',
+    compile: (markdown, opts = {}) =>
       mdit.mdit(state['markdown-it'])
+        .use(opts.blockmap ? mdblockmap.markdownIt : () => {})
         .use(mdit.anchor, {
           slugify: (s) => new mdit.slugger().slug(s)
         })
