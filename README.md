@@ -119,7 +119,7 @@ Full **CommonMark** support including **GFM** tables and strikethrough **+**
 | **mathjax**    | `false` | Render MathJax formulas
 | **mermaid**    | `false` | Render Mermaid diagrams
 | **syntax**     | **`true`**  | Syntax highlighted fenced code blocks
-| **toc**        | `false` | Generate Table of Contents
+| **toc**        | **`true`**  | Generate Table of Contents
 
 ## Autoreload
 
@@ -186,6 +186,14 @@ Alternatively code blocks can be wrapped in HTML tags:
 ## ToC
 
 Generates Table of Contents (ToC) based on the headers found in the markdown document.
+
+The ToC is a fixed column on the left of the page, and is on by default. It
+tracks the reader: the entry for the section currently on screen is highlighted,
+and the column scrolls to keep that entry visible. Scrolling the column by hand
+is not interrupted while the entry stays in view.
+
+Defaults only apply on a fresh install. If the extension is already installed
+with the ToC turned off, turn it on from the extension popup.
 
 ---
 

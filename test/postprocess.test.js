@@ -109,6 +109,21 @@ test('the toc is empty for a document with no headings', () => {
   assert.equal(post.toc(mdit().render('just text\n')), '')
 })
 
+// content/toc.js pairs a toc entry with its heading by looking the fragment up
+// with getElementById. markdown-it anchor percent encodes the id, and post.toc
+// copies that id into the href untouched, so the two match byte for byte and
+// the fragment must not be decoded first.
+test('the toc href is the heading id verbatim, escaping and all', () => {
+  var html = mdit({html: true}).use(anchor).render('## Install (v1.0) 50% [done]\n')
+
+  var id = /<h2[^>]*\sid="([^"]*)"/.exec(html)[1]
+  var href = /href="#([^"]*)"/.exec(post.toc(html))[1]
+
+  assert.equal(href, id)
+  assert.ok(/%/.test(id), 'expected the compiler to escape this id: ' + id)
+  assert.notEqual(decodeURIComponent(href), id, 'decoding the fragment would break the lookup')
+})
+
 test('mermaid rewriting is a no-op when there are no diagrams', () => {
   var html = mdit().render('# T\n\n```js\nvar a = 1\n```\n')
   assert.equal(post.mermaid(html), html)

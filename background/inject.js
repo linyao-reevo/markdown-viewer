@@ -41,6 +41,7 @@ md.inject = ({storage: {state}}) => (id) => {
       state.content.mathjax && ['/content/mathjax.js', '/vendor/mathjax/tex-mml-chtml.js'],
       '/content/index.js',
       '/content/scroll.js',
+      state.content.toc && ['/lib/toc.js', '/content/toc.js'],
       // editing is only possible where a local file can be written back
       state.edit && [
         '/vendor/turndown.min.js',

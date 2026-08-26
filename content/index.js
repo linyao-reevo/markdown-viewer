@@ -116,6 +116,11 @@ var onupdate = {
     if (state.content.mermaid) {
       setTimeout(() => mmd.render(), 0)
     }
+  },
+  toc: () => {
+    // a redraw can rebuild the sidebar, which throws away the links the spy is
+    // holding and the class it put on one of them
+    setTimeout(() => tocspy.attach(), 0)
   }
 }
 
@@ -136,6 +141,12 @@ var update = (update) => {
 
   if (state.content.mathjax) {
     setTimeout(() => mj.render(), 60)
+  }
+
+  // last: syntax, mermaid and mathjax all change the height of the document,
+  // and the spy measures where every heading sits
+  if (state.content.toc) {
+    setTimeout(() => tocspy.attach(), 80)
   }
 }
 
@@ -222,7 +233,7 @@ function mount () {
         }
 
         if (state.content.toc) {
-          dom.push(m('#_toc.tex2jax-ignore', m.trust(state.toc)))
+          dom.push(m('#_toc.tex2jax-ignore', {onupdate: onupdate.toc}, m.trust(state.toc)))
           state.raw ? $('body').classList.remove('_toc-left') : $('body').classList.add('_toc-left')
         }
 

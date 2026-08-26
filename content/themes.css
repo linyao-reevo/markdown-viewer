@@ -40,6 +40,10 @@
 ._theme-github #_toc a:hover {
   text-decoration: underline;
 }
+._theme-github #_toc ._ul a._active {
+  background-color: #eaeef2 !important;
+  color: #24292f !important;
+}
 
 /*github-dark*/
 ._theme-github-dark #_toc { /*.markdown-body {*/
@@ -56,6 +60,10 @@
 }
 ._theme-github-dark #_toc a:hover {
   text-decoration: underline;
+}
+._theme-github-dark #_toc ._ul a._active {
+  background-color: #21262d !important;
+  color: #c9d1d9 !important;
 }
 
 /*---------------------------------------------------------------------------*/
