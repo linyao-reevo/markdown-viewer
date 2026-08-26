@@ -19,6 +19,7 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
     dirty: false,
     history: [],
     pending: null,  // index of a block to enter once the next render lands
+    grantMode: 'save',
     bar: null,
     kind: 'clean',
     text: '',
@@ -300,18 +301,46 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
         return
       }
 
-      status('error',
-        res.error === 'cancelled' ? 'Not saved' :
-        res.error === 'nohandle' ? 'No write access to this file' :
-        res.error === 'permission' ? 'Write access was not granted' :
-        res.error === 'mismatch' ? 'This file changed on disk since it was opened' :
-        res.message || 'Could not write the file'
-      )
-
       if (res.error === 'mismatch') {
-        edit.kind = 'mismatch'
-        paint()
+        status('mismatch', 'This file changed on disk since it was opened')
+        return
       }
+
+      // these are all fixed by granting access, so the bar offers to do that
+      if (res.error === 'nogrants' || res.error === 'notfound' ||
+          res.error === 'permission' || res.error === 'gone') {
+        edit.grantMode = res.error === 'permission' ? 'permission' : 'save'
+
+        status('needsgrant',
+          res.error === 'nogrants'
+            ? 'Chrome has not been given access to this folder yet' :
+          res.error === 'notfound'
+            ? 'Not covered by ' + folders(res.folders) :
+          res.error === 'gone'
+            ? 'That file is no longer where it was' :
+            'Write access lapsed, Chrome needs it again'
+        )
+        return
+      }
+
+      status('error', res.message || 'Could not write the file')
+    })
+  }
+
+  var folders = (names) =>
+    !names || !names.length ? 'any granted folder' :
+    names.length === 1 ? 'the granted folder "' + names[0] + '"' :
+    'the granted folders ' + names.map((n) => '"' + n + '"').join(', ')
+
+  var grant = () => {
+    status('saving', 'Waiting for Chrome…')
+    chrome.runtime.sendMessage({
+      message: 'edit.grant',
+      url: location.href,
+      mode: edit.grantMode || 'save',
+    }, () => {
+      chrome.runtime.lastError
+      status('needsgrant', 'Grant access in the window Chrome opened')
     })
   }
 
@@ -357,6 +386,9 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
         else if (action === 'force') {
           save(true)
         }
+        else if (action === 'grant') {
+          grant()
+        }
         else if (action === 'reload') {
           location.reload()
         }
@@ -379,6 +411,12 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
     if (edit.kind === 'mismatch') {
       edit.bar.appendChild(button('reload', 'Reload'))
       edit.bar.appendChild(button('force', 'Overwrite'))
+    }
+    else if (edit.kind === 'needsgrant') {
+      // Save stays available, so a retry is never more than one click away if
+      // the automatic one does not arrive
+      edit.bar.appendChild(button('grant', 'Grant access…'))
+      edit.bar.appendChild(button('save', 'Save'))
     }
     else {
       edit.bar.appendChild(button('save', 'Save'))
@@ -487,5 +525,14 @@ var mdedit = typeof mdedit !== 'undefined' ? mdedit : (() => {
     }
   })
 
-  return {attach, save, commit, dirty: () => edit.dirty}
+  // called when a grant lands, so the save the user already asked for happens
+  // without them having to ask twice
+  var retry = () => {
+    if (enabled() && (edit.dirty || edit.kind === 'needsgrant')) {
+      commit()
+      save(false)
+    }
+  }
+
+  return {attach, save, commit, retry, dirty: () => edit.dirty}
 })()

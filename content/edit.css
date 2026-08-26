@@ -112,6 +112,18 @@
   color: #ff7b72;
 }
 
+#_md-bar._md-bar-needsgrant ._md-bar-text {
+  color: #e3b341;
+}
+
+#_md-bar._md-bar-needsgrant ._md-bar-button[data-action="grant"] {
+  background: #1f6feb;
+}
+
+#_md-bar._md-bar-needsgrant ._md-bar-button[data-action="grant"]:hover {
+  background: #388bfd;
+}
+
 #_md-bar._md-bar-mismatch ._md-bar-button[data-action="force"] {
   background: #a1301f;
 }

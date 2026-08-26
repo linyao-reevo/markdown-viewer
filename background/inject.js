@@ -34,6 +34,7 @@ md.inject = ({storage: {state}}) => (id) => {
     files: [
       '/vendor/mithril.min.js',
       '/lib/lines.js',
+      '/lib/postprocess.js',
       state.content.syntax && ['/vendor/prism.min.js', '/vendor/prism-autoloader.min.js', '/content/prism.js'],
       state.content.emoji && '/content/emoji.js',
       state.content.mermaid && ['/vendor/mermaid.min.js', '/vendor/panzoom.min.js', '/content/mermaid.js'],

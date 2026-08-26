@@ -7,8 +7,8 @@
 
   var status = async ({url}) => {
     var found = await mdhandles.resolve(url)
-    if (!found) {
-      return {error: 'nohandle'}
+    if (!found.handle) {
+      return {error: found.reason, folders: found.folders}
     }
     if (!await mdhandles.granted(found.root)) {
       return {error: 'permission', source: found.source}
@@ -18,8 +18,8 @@
 
   var write = async ({url, markdown, original, force}) => {
     var found = await mdhandles.resolve(url)
-    if (!found) {
-      return {error: 'nohandle'}
+    if (!found.handle) {
+      return {error: found.reason, folders: found.folders}
     }
     if (!await mdhandles.granted(found.root)) {
       return {error: 'permission', source: found.source}
@@ -35,7 +35,7 @@
       if (found.source === 'file') {
         await mdidb.files.remove(url)
       }
-      return {error: 'nohandle'}
+      return {error: 'gone'}
     }
 
     if (!force && mdlines.normalise(disk) !== mdlines.normalise(original)) {

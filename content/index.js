@@ -89,6 +89,11 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     state.reload.md = true
     render(state.markdown)
   }
+  else if (req.message === 'edit.retry') {
+    if (typeof mdedit !== 'undefined') {
+      mdedit.retry()
+    }
+  }
   else if (req.message === 'autoreload') {
     clearInterval(state.reload.interval)
   }
@@ -150,15 +155,12 @@ var render = (md) => {
       state.html = emojinator(state.html)
     }
     if (state.content.mermaid) {
-      state.html = state.html.replace(
-        /<code class="language-(?:mermaid|mmd)">/gi,
-        '<code class="mermaid">'
-      )
+      state.html = mdpost.mermaid(state.html)
     }
     if (state.content.toc) {
-      state.toc = toc.render(state.html)
+      state.toc = mdpost.toc(state.html)
     }
-    state.html = anchors(state.html)
+    state.html = mdpost.anchors(state.html)
     m.redraw()
   })
 }
@@ -233,32 +235,6 @@ function mount () {
     }
   })
 }
-
-var anchors = (html) =>
-  html.replace(/(<h[1-6] id="(.*?)">)/g, (header, _, id) =>
-    header +
-    '<a class="anchor" name="' + id + '" href="#' + id + '">' +
-    '<span class="octicon octicon-link"></span></a>'
-  )
-
-var toc = (() => {
-  var walk = (regex, string, group, result = [], match = regex.exec(string)) =>
-    !match ? result : walk(regex, string, group, result.concat(!group ? match[1] :
-      group.reduce((all, name, index) => (all[name] = match[index + 1], all), {})))
-  return {
-    render: (html) =>
-      walk(
-        /<h([1-6]) id="(.*?)">(.*?)<\/h[1-6]>/gs,
-        html,
-        ['level', 'id', 'title']
-      )
-      .reduce((toc, {id, title, level}) => toc +=
-        '<div class="_ul">'.repeat(level) +
-        '<a href="#' + id + '">' + title.replace(/<a[^>]+>/g, '').replace(/<\/a>/g, '') + '</a>' +
-        '</div>'.repeat(level)
-      , '')
-  }
-})()
 
 var frontmatter = (md) => {
   if (/^-{3}[\s\S]+?-{3}/.test(md)) {

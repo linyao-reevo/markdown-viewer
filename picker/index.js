@@ -19,12 +19,20 @@
   var $ = document.querySelector.bind(document)
 
   var reported = false
+
+  // resolves once the worker has the message. Closing the window immediately
+  // after sending can drop it, and then nothing tells the page to try again.
   var report = (ok) => {
     if (reported) {
-      return
+      return Promise.resolve()
     }
     reported = true
-    chrome.runtime.sendMessage({message: 'picker.done', url, ok: !!ok})
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({message: 'picker.done', url, ok: !!ok}, () => {
+        chrome.runtime.lastError
+        resolve()
+      })
+    })
   }
 
   var busy = (state) => {
@@ -38,10 +46,7 @@
     busy(false)
   }
 
-  var done = (ok) => {
-    report(ok)
-    window.close()
-  }
+  var done = (ok) => report(ok).then(() => window.close())
 
   // grant the folder the file sits in; every markdown file under it saves
   // silently from then on
@@ -51,7 +56,7 @@
 
     // make sure the folder they chose actually contains this file, otherwise
     // the next save would open this window all over again
-    if (!await mdhandles.resolve(url)) {
+    if (!(await mdhandles.resolve(url)).handle) {
       await mdidb.dirs.remove(id)
       throw new Error(
         'That folder does not contain ' + name + '. Choose ' +
@@ -79,7 +84,7 @@
 
   var regrant = async () => {
     var found = await mdhandles.resolve(url)
-    if (!found) {
+    if (!found.handle) {
       // the grant is gone entirely, so ask for it from scratch
       return grantFolder()
     }

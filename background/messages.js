@@ -60,11 +60,17 @@ md.messages = ({storage: {defaults, state, set}, compilers, mathjax, xhr, webreq
     else if (req.message === 'edit.status') {
       fs.status(req)
         .then(sendResponse)
-        .catch(() => sendResponse({error: 'nohandle'}))
+        .catch(() => sendResponse({error: 'nogrants'}))
+    }
+    else if (req.message === 'edit.grant') {
+      fs.grant(req).then(sendResponse).catch((err) => sendResponse({
+        error: 'write',
+        message: String(err && err.message || err),
+      }))
     }
     else if (req.message === 'picker.done') {
-      fs.finish(req.ok)
       sendResponse()
+      fs.finish(req.ok, req.url)
     }
     else if (req.message === 'autoreload') {
       xhr.get(req.location, (err, body) => {
